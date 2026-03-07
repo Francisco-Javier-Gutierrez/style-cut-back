@@ -1,0 +1,276 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Persona {
+  id               Int        @id @default(autoincrement())
+  nombre           String     @db.VarChar(100)
+  apellido_paterno String     @db.VarChar(100)
+  apellido_materno String?    @db.VarChar(100)
+  telefono         String?    @db.VarChar(20)
+  email            String?    @unique @db.VarChar(150)
+  fecha_nacimiento DateTime?  @db.Date
+  genero           String?    @db.VarChar(20)
+  created_at       DateTime   @default(now())
+  updated_at       DateTime   @updatedAt
+  usuario          Usuario?
+  cliente          Cliente?
+  empleado         Empleado?
+  direcciones      Direccion[]
+
+  @@map("persona")
+}
+
+model Rol {
+  id          Int       @id @default(autoincrement())
+  nombre      String    @unique @db.VarChar(50)
+  descripcion String?   @db.VarChar(255)
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+  usuarios    Usuario[]
+
+  @@map("rol")
+}
+
+model Usuario {
+  id                Int               @id @default(autoincrement())
+  persona_id        Int               @unique
+  rol_id            Int
+  username          String            @unique @db.VarChar(50)
+  password          String            @db.VarChar(255)
+  estatus           String            @default("activo") @db.VarChar(20)
+  ultimo_acceso     DateTime?
+  created_at        DateTime          @default(now())
+  updated_at        DateTime          @updatedAt
+  persona           Persona           @relation(fields: [persona_id], references: [id])
+  rol               Rol               @relation(fields: [rol_id], references: [id])
+  bitacora_accesos  BitacoraAcceso[]
+
+  @@map("usuario")
+}
+
+model BitacoraAcceso {
+  id            Int      @id @default(autoincrement())
+  usuario_id    Int
+  fecha_acceso  DateTime @default(now())
+  ip            String?  @db.VarChar(45)
+  accion        String   @db.VarChar(100)
+  detalles      String?
+  created_at    DateTime @default(now())
+  usuario       Usuario  @relation(fields: [usuario_id], references: [id])
+
+  @@map("bitacora_accesos")
+}
+
+model Cliente {
+  id          Int          @id @default(autoincrement())
+  persona_id  Int          @unique
+  estatus     String       @default("activo") @db.VarChar(20)
+  created_at  DateTime     @default(now())
+  updated_at  DateTime     @updatedAt
+  persona     Persona      @relation(fields: [persona_id], references: [id])
+  citas       Cita[]
+  comentarios Comentario[]
+  pagos       Pago[]
+
+  @@map("cliente")
+}
+
+model Empleado {
+  id                  Int                @id @default(autoincrement())
+  persona_id          Int                @unique
+  especialidad        String?            @db.VarChar(100)
+  estatus             String             @default("activo") @db.VarChar(20)
+  created_at          DateTime           @default(now())
+  updated_at          DateTime           @updatedAt
+  persona             Persona            @relation(fields: [persona_id], references: [id])
+  empleado_servicios  EmpleadoServicio[]
+  horarios            HorarioEmpleado[]
+  citas               Cita[]
+
+  @@map("empleado")
+}
+
+model Direccion {
+  id               Int      @id @default(autoincrement())
+  persona_id       Int
+  calle            String   @db.VarChar(150)
+  numero_exterior  String   @db.VarChar(20)
+  numero_interior  String?  @db.VarChar(20)
+  colonia          String   @db.VarChar(100)
+  ciudad           String   @db.VarChar(100)
+  estado           String   @db.VarChar(100)
+  codigo_postal    String   @db.VarChar(10)
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+  persona          Persona  @relation(fields: [persona_id], references: [id])
+
+  @@map("direccion")
+}
+
+model CategoriaServicio {
+  id          Int        @id @default(autoincrement())
+  nombre      String     @unique @db.VarChar(100)
+  descripcion String?    @db.VarChar(255)
+  created_at  DateTime   @default(now())
+  updated_at  DateTime   @updatedAt
+  servicios   Servicio[]
+
+  @@map("categoria_servicio")
+}
+
+model ClasificacionServicio {
+  id          Int        @id @default(autoincrement())
+  nombre      String     @unique @db.VarChar(100)
+  descripcion String?    @db.VarChar(255)
+  created_at  DateTime   @default(now())
+  updated_at  DateTime   @updatedAt
+  servicios   Servicio[]
+
+  @@map("clasificacion_servicio")
+}
+
+model Servicio {
+  id                      Int                   @id @default(autoincrement())
+  categoria_id            Int
+  clasificacion_id        Int
+  nombre                  String                @db.VarChar(150)
+  descripcion             String?
+  precio                  Decimal               @db.Decimal(10, 2)
+  duracion_minutos        Int
+  estatus                 String                @default("activo") @db.VarChar(20)
+  created_at              DateTime              @default(now())
+  updated_at              DateTime              @updatedAt
+  categoria               CategoriaServicio     @relation(fields: [categoria_id], references: [id])
+  clasificacion           ClasificacionServicio @relation(fields: [clasificacion_id], references: [id])
+  empleado_servicios      EmpleadoServicio[]
+  citas                   Cita[]
+  comentarios             Comentario[]
+  promocion_servicios     PromocionServicio[]
+
+  @@map("servicio")
+}
+
+model EmpleadoServicio {
+  id           Int      @id @default(autoincrement())
+  empleado_id  Int
+  servicio_id  Int
+  created_at   DateTime @default(now())
+  empleado     Empleado @relation(fields: [empleado_id], references: [id])
+  servicio     Servicio @relation(fields: [servicio_id], references: [id])
+
+  @@unique([empleado_id, servicio_id])
+  @@map("empleado_servicio")
+}
+
+model HorarioEmpleado {
+  id          Int      @id @default(autoincrement())
+  empleado_id Int
+  dia_semana  String   @db.VarChar(20)
+  hora_inicio DateTime @db.Time()
+  hora_fin    DateTime @db.Time()
+  activo      Boolean  @default(true)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  empleado    Empleado @relation(fields: [empleado_id], references: [id])
+
+  @@map("horario_empleado")
+}
+
+model Cita {
+  id                      Int                    @id @default(autoincrement())
+  cliente_id              Int
+  empleado_id             Int
+  servicio_id             Int
+  fecha                   DateTime               @db.Date
+  hora_inicio             DateTime               @db.Time()
+  hora_fin                DateTime               @db.Time()
+  estatus                 String                 @default("pendiente") @db.VarChar(30)
+  notas                   String?
+  created_at              DateTime               @default(now())
+  updated_at              DateTime               @updatedAt
+  cliente                 Cliente                @relation(fields: [cliente_id], references: [id])
+  empleado                Empleado               @relation(fields: [empleado_id], references: [id])
+  servicio                Servicio               @relation(fields: [servicio_id], references: [id])
+  historial_estatus       HistorialEstatusCita[]
+  pagos                   Pago[]
+
+  @@map("cita")
+}
+
+model HistorialEstatusCita {
+  id               Int      @id @default(autoincrement())
+  cita_id          Int
+  estatus_anterior String   @db.VarChar(30)
+  estatus_nuevo    String   @db.VarChar(30)
+  fecha_cambio     DateTime @default(now())
+  motivo           String?
+  created_at       DateTime @default(now())
+  cita             Cita     @relation(fields: [cita_id], references: [id])
+
+  @@map("historial_estatus_cita")
+}
+
+model Pago {
+  id           Int      @id @default(autoincrement())
+  cita_id      Int
+  cliente_id   Int
+  monto        Decimal  @db.Decimal(10, 2)
+  metodo_pago  String   @db.VarChar(50)
+  fecha_pago   DateTime @default(now())
+  referencia   String?  @db.VarChar(100)
+  estatus      String   @default("completado") @db.VarChar(30)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+  cita         Cita     @relation(fields: [cita_id], references: [id])
+  cliente      Cliente  @relation(fields: [cliente_id], references: [id])
+
+  @@map("pago")
+}
+
+model Comentario {
+  id           Int      @id @default(autoincrement())
+  cliente_id   Int
+  servicio_id  Int
+  calificacion Int
+  contenido    String?
+  fecha        DateTime @default(now())
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+  cliente      Cliente  @relation(fields: [cliente_id], references: [id])
+  servicio     Servicio @relation(fields: [servicio_id], references: [id])
+
+  @@map("comentario")
+}
+
+model Promocion {
+  id                    Int                 @id @default(autoincrement())
+  nombre                String              @db.VarChar(150)
+  descripcion           String?
+  descuento_porcentaje  Decimal             @db.Decimal(5, 2)
+  fecha_inicio          DateTime            @db.Date
+  fecha_fin             DateTime            @db.Date
+  activo                Boolean             @default(true)
+  created_at            DateTime            @default(now())
+  updated_at            DateTime            @updatedAt
+  promocion_servicios   PromocionServicio[]
+
+  @@map("promocion")
+}
+
+model PromocionServicio {
+  id           Int       @id @default(autoincrement())
+  promocion_id Int
+  servicio_id  Int
+  created_at   DateTime  @default(now())
+  promocion    Promocion @relation(fields: [promocion_id], references: [id])
+  servicio     Servicio  @relation(fields: [servicio_id], references: [id])
+
+  @@unique([promocion_id, servicio_id])
+  @@map("promocion_servicio")
+}
