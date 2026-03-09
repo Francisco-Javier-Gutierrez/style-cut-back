@@ -6,11 +6,14 @@ const {
     getAllCitas,
     adminCancelCita,
     adminRescheduleCita,
+    getDisponibilidad,
 } = require("../controllers/cita.controller");
 const authMiddleware = require("../middlewares/auth.middleware");
 const authorizeRoles = require("../middlewares/role.middleware");
 
 const router = Router();
+
+router.get("/disponibilidad", authMiddleware, authorizeRoles("Cliente"), getDisponibilidad);
 
 router.post("/", authMiddleware, authorizeRoles("Cliente"), createCita);
 router.get("/mis-citas", authMiddleware, authorizeRoles("Cliente"), getMyCitas);

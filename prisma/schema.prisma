@@ -8,16 +8,16 @@ datasource db {
 }
 
 model Persona {
-  id               Int        @id @default(autoincrement())
-  nombre           String     @db.VarChar(100)
-  apellido_paterno String     @db.VarChar(100)
-  apellido_materno String?    @db.VarChar(100)
-  telefono         String?    @db.VarChar(20)
-  email            String?    @unique @db.VarChar(150)
-  fecha_nacimiento DateTime?  @db.Date
-  genero           String?    @db.VarChar(20)
-  created_at       DateTime   @default(now())
-  updated_at       DateTime   @updatedAt
+  id               Int         @id @default(autoincrement())
+  nombre           String      @db.VarChar(100)
+  apellido_paterno String      @db.VarChar(100)
+  apellido_materno String?     @db.VarChar(100)
+  telefono         String?     @db.VarChar(20)
+  email            String?     @unique @db.VarChar(150)
+  fecha_nacimiento DateTime?   @db.Date
+  genero           String?     @db.VarChar(20)
+  created_at       DateTime    @default(now())
+  updated_at       DateTime    @updatedAt
   usuario          Usuario?
   cliente          Cliente?
   empleado         Empleado?
@@ -38,31 +38,31 @@ model Rol {
 }
 
 model Usuario {
-  id                Int               @id @default(autoincrement())
-  persona_id        Int               @unique
-  rol_id            Int
-  username          String            @unique @db.VarChar(50)
-  password          String            @db.VarChar(255)
-  estatus           String            @default("activo") @db.VarChar(20)
-  ultimo_acceso     DateTime?
-  created_at        DateTime          @default(now())
-  updated_at        DateTime          @updatedAt
-  persona           Persona           @relation(fields: [persona_id], references: [id])
-  rol               Rol               @relation(fields: [rol_id], references: [id])
-  bitacora_accesos  BitacoraAcceso[]
+  id               Int              @id @default(autoincrement())
+  persona_id       Int              @unique
+  rol_id           Int
+  username         String           @unique @db.VarChar(50)
+  password         String           @db.VarChar(255)
+  estatus          String           @default("activo") @db.VarChar(20)
+  ultimo_acceso    DateTime?
+  created_at       DateTime         @default(now())
+  updated_at       DateTime         @updatedAt
+  persona          Persona          @relation(fields: [persona_id], references: [id])
+  rol              Rol              @relation(fields: [rol_id], references: [id])
+  bitacora_accesos BitacoraAcceso[]
 
   @@map("usuario")
 }
 
 model BitacoraAcceso {
-  id            Int      @id @default(autoincrement())
-  usuario_id    Int
-  fecha_acceso  DateTime @default(now())
-  ip            String?  @db.VarChar(45)
-  accion        String   @db.VarChar(100)
-  detalles      String?
-  created_at    DateTime @default(now())
-  usuario       Usuario  @relation(fields: [usuario_id], references: [id])
+  id           Int      @id @default(autoincrement())
+  usuario_id   Int
+  fecha_acceso DateTime @default(now())
+  ip           String?  @db.VarChar(45)
+  accion       String   @db.VarChar(100)
+  detalles     String?
+  created_at   DateTime @default(now())
+  usuario      Usuario  @relation(fields: [usuario_id], references: [id])
 
   @@map("bitacora_accesos")
 }
@@ -82,33 +82,33 @@ model Cliente {
 }
 
 model Empleado {
-  id                  Int                @id @default(autoincrement())
-  persona_id          Int                @unique
-  especialidad        String?            @db.VarChar(100)
-  estatus             String             @default("activo") @db.VarChar(20)
-  created_at          DateTime           @default(now())
-  updated_at          DateTime           @updatedAt
-  persona             Persona            @relation(fields: [persona_id], references: [id])
-  empleado_servicios  EmpleadoServicio[]
-  horarios            HorarioEmpleado[]
-  citas               Cita[]
+  id                 Int                         @id @default(autoincrement())
+  persona_id         Int                         @unique
+  especialidad       String?                     @db.VarChar(100)
+  estatus            String                      @default("activo") @db.VarChar(20)
+  created_at         DateTime                    @default(now())
+  updated_at         DateTime                    @updatedAt
+  persona            Persona                     @relation(fields: [persona_id], references: [id])
+  empleado_servicios EmpleadoServicio[]
+  horarios_asignados EmpleadoHorarioAsignacion[]
+  citas              Cita[]
 
   @@map("empleado")
 }
 
 model Direccion {
-  id               Int      @id @default(autoincrement())
-  persona_id       Int
-  calle            String   @db.VarChar(150)
-  numero_exterior  String   @db.VarChar(20)
-  numero_interior  String?  @db.VarChar(20)
-  colonia          String   @db.VarChar(100)
-  ciudad           String   @db.VarChar(100)
-  estado           String   @db.VarChar(100)
-  codigo_postal    String   @db.VarChar(10)
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
-  persona          Persona  @relation(fields: [persona_id], references: [id])
+  id              Int      @id @default(autoincrement())
+  persona_id      Int
+  calle           String   @db.VarChar(150)
+  numero_exterior String   @db.VarChar(20)
+  numero_interior String?  @db.VarChar(20)
+  colonia         String   @db.VarChar(100)
+  ciudad          String   @db.VarChar(100)
+  estado          String   @db.VarChar(100)
+  codigo_postal   String   @db.VarChar(10)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+  persona         Persona  @relation(fields: [persona_id], references: [id])
 
   @@map("direccion")
 }
@@ -136,69 +136,81 @@ model ClasificacionServicio {
 }
 
 model Servicio {
-  id                      Int                   @id @default(autoincrement())
-  categoria_id            Int
-  clasificacion_id        Int
-  nombre                  String                @db.VarChar(150)
-  descripcion             String?
-  precio                  Decimal               @db.Decimal(10, 2)
-  duracion_minutos        Int
-  estatus                 String                @default("activo") @db.VarChar(20)
-  created_at              DateTime              @default(now())
-  updated_at              DateTime              @updatedAt
-  categoria               CategoriaServicio     @relation(fields: [categoria_id], references: [id])
-  clasificacion           ClasificacionServicio @relation(fields: [clasificacion_id], references: [id])
-  empleado_servicios      EmpleadoServicio[]
-  citas                   Cita[]
-  comentarios             Comentario[]
-  promocion_servicios     PromocionServicio[]
+  id                  Int                   @id @default(autoincrement())
+  categoria_id        Int
+  clasificacion_id    Int
+  nombre              String                @db.VarChar(150)
+  descripcion         String?
+  precio              Decimal               @db.Decimal(10, 2)
+  duracion_minutos    Int
+  estatus             String                @default("activo") @db.VarChar(20)
+  created_at          DateTime              @default(now())
+  updated_at          DateTime              @updatedAt
+  categoria           CategoriaServicio     @relation(fields: [categoria_id], references: [id])
+  clasificacion       ClasificacionServicio @relation(fields: [clasificacion_id], references: [id])
+  empleado_servicios  EmpleadoServicio[]
+  citas               Cita[]
+  comentarios         Comentario[]
+  promocion_servicios PromocionServicio[]
 
   @@map("servicio")
 }
 
 model EmpleadoServicio {
-  id           Int      @id @default(autoincrement())
-  empleado_id  Int
-  servicio_id  Int
-  created_at   DateTime @default(now())
-  empleado     Empleado @relation(fields: [empleado_id], references: [id])
-  servicio     Servicio @relation(fields: [servicio_id], references: [id])
+  id          Int      @id @default(autoincrement())
+  empleado_id Int
+  servicio_id Int
+  created_at  DateTime @default(now())
+  empleado    Empleado @relation(fields: [empleado_id], references: [id])
+  servicio    Servicio @relation(fields: [servicio_id], references: [id])
 
   @@unique([empleado_id, servicio_id])
   @@map("empleado_servicio")
 }
 
-model HorarioEmpleado {
+model Horario {
+  id                  Int                         @id @default(autoincrement())
+  dia_semana          String                      @db.VarChar(20)
+  hora_inicio         DateTime                    @db.Time()
+  hora_fin            DateTime                    @db.Time()
+  created_at          DateTime                    @default(now())
+  updated_at          DateTime                    @updatedAt
+  empleados_asignados EmpleadoHorarioAsignacion[]
+
+  @@map("horario")
+}
+
+model EmpleadoHorarioAsignacion {
   id          Int      @id @default(autoincrement())
   empleado_id Int
-  dia_semana  String   @db.VarChar(20)
-  hora_inicio DateTime @db.Time()
-  hora_fin    DateTime @db.Time()
+  horario_id  Int
   activo      Boolean  @default(true)
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
   empleado    Empleado @relation(fields: [empleado_id], references: [id])
+  horario     Horario  @relation(fields: [horario_id], references: [id])
 
-  @@map("horario_empleado")
+  @@unique([empleado_id, horario_id])
+  @@map("empleado_horario_asignacion")
 }
 
 model Cita {
-  id                      Int                    @id @default(autoincrement())
-  cliente_id              Int
-  empleado_id             Int
-  servicio_id             Int
-  fecha                   DateTime               @db.Date
-  hora_inicio             DateTime               @db.Time()
-  hora_fin                DateTime               @db.Time()
-  estatus                 String                 @default("pendiente") @db.VarChar(30)
-  notas                   String?
-  created_at              DateTime               @default(now())
-  updated_at              DateTime               @updatedAt
-  cliente                 Cliente                @relation(fields: [cliente_id], references: [id])
-  empleado                Empleado               @relation(fields: [empleado_id], references: [id])
-  servicio                Servicio               @relation(fields: [servicio_id], references: [id])
-  historial_estatus       HistorialEstatusCita[]
-  pagos                   Pago[]
+  id                Int                    @id @default(autoincrement())
+  cliente_id        Int
+  empleado_id       Int
+  servicio_id       Int
+  fecha             DateTime               @db.Date
+  hora_inicio       DateTime               @db.Time()
+  hora_fin          DateTime               @db.Time()
+  estatus           String                 @default("pendiente") @db.VarChar(30)
+  notas             String?
+  created_at        DateTime               @default(now())
+  updated_at        DateTime               @updatedAt
+  cliente           Cliente                @relation(fields: [cliente_id], references: [id])
+  empleado          Empleado               @relation(fields: [empleado_id], references: [id])
+  servicio          Servicio               @relation(fields: [servicio_id], references: [id])
+  historial_estatus HistorialEstatusCita[]
+  pagos             Pago[]
 
   @@map("cita")
 }
@@ -217,18 +229,18 @@ model HistorialEstatusCita {
 }
 
 model Pago {
-  id           Int      @id @default(autoincrement())
-  cita_id      Int
-  cliente_id   Int
-  monto        Decimal  @db.Decimal(10, 2)
-  metodo_pago  String   @db.VarChar(50)
-  fecha_pago   DateTime @default(now())
-  referencia   String?  @db.VarChar(100)
-  estatus      String   @default("completado") @db.VarChar(30)
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
-  cita         Cita     @relation(fields: [cita_id], references: [id])
-  cliente      Cliente  @relation(fields: [cliente_id], references: [id])
+  id          Int      @id @default(autoincrement())
+  cita_id     Int
+  cliente_id  Int
+  monto       Decimal  @db.Decimal(10, 2)
+  metodo_pago String   @db.VarChar(50)
+  fecha_pago  DateTime @default(now())
+  referencia  String?  @db.VarChar(100)
+  estatus     String   @default("completado") @db.VarChar(30)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  cita        Cita     @relation(fields: [cita_id], references: [id])
+  cliente     Cliente  @relation(fields: [cliente_id], references: [id])
 
   @@map("pago")
 }
@@ -249,16 +261,16 @@ model Comentario {
 }
 
 model Promocion {
-  id                    Int                 @id @default(autoincrement())
-  nombre                String              @db.VarChar(150)
-  descripcion           String?
-  descuento_porcentaje  Decimal             @db.Decimal(5, 2)
-  fecha_inicio          DateTime            @db.Date
-  fecha_fin             DateTime            @db.Date
-  activo                Boolean             @default(true)
-  created_at            DateTime            @default(now())
-  updated_at            DateTime            @updatedAt
-  promocion_servicios   PromocionServicio[]
+  id                   Int                 @id @default(autoincrement())
+  nombre               String              @db.VarChar(150)
+  descripcion          String?
+  descuento_porcentaje Decimal             @db.Decimal(5, 2)
+  fecha_inicio         DateTime            @db.Date
+  fecha_fin            DateTime            @db.Date
+  activo               Boolean             @default(true)
+  created_at           DateTime            @default(now())
+  updated_at           DateTime            @updatedAt
+  promocion_servicios  PromocionServicio[]
 
   @@map("promocion")
 }

@@ -5,26 +5,53 @@ const createHorario = async (req, res) => {
         const { empleado_id, dia_semana, hora_inicio, hora_fin } = req.body;
 
         const empleado = await prisma.empleado.findUnique({
-            where: { id: empleado_id },
+            where: { id: parseInt(empleado_id) },
         });
 
         if (!empleado) {
             return res.status(404).json({ message: "Empleado no encontrado" });
         }
 
-        const horario = await prisma.horarioEmpleado.create({
-            data: {
-                empleado_id,
+        let horario = await prisma.horario.findFirst({
+            where: {
                 dia_semana,
                 hora_inicio: new Date(`1970-01-01T${hora_inicio}:00.000Z`),
                 hora_fin: new Date(`1970-01-01T${hora_fin}:00.000Z`),
-            },
-            include: {
-                empleado: { include: { persona: true } },
-            },
+            }
         });
 
-        return res.status(201).json({ message: "Horario creado exitosamente", horario });
+        if (!horario) {
+            horario = await prisma.horario.create({
+                data: {
+                    dia_semana,
+                    hora_inicio: new Date(`1970-01-01T${hora_inicio}:00.000Z`),
+                    hora_fin: new Date(`1970-01-01T${hora_fin}:00.000Z`),
+                }
+            });
+        }
+
+        const asignacionExistente = await prisma.empleadoHorarioAsignacion.findUnique({
+            where: {
+                empleado_id_horario_id: {
+                    empleado_id: parseInt(empleado_id),
+                    horario_id: horario.id
+                }
+            }
+        });
+
+        if (asignacionExistente) {
+            return res.status(400).json({ message: "El empleado ya tiene asignado este horario" });
+        }
+
+        await prisma.empleadoHorarioAsignacion.create({
+            data: {
+                empleado_id: parseInt(empleado_id),
+                horario_id: horario.id,
+                activo: true
+            }
+        });
+
+        return res.status(200).json({ message: "Horario creado y asignado exitosamente" });
     } catch (error) {
         return res.status(500).json({ message: "Error al crear el horario", error: error.message });
     }
@@ -34,15 +61,16 @@ const getHorariosByEmpleado = async (req, res) => {
     try {
         const { empleado_id } = req.params;
 
-        const horarios = await prisma.horarioEmpleado.findMany({
+        const asignaciones = await prisma.empleadoHorarioAsignacion.findMany({
             where: { empleado_id: parseInt(empleado_id) },
             include: {
+                horario: true,
                 empleado: { include: { persona: true } },
             },
-            orderBy: { dia_semana: "asc" },
+            orderBy: { horario: { dia_semana: "asc" } },
         });
 
-        return res.status(200).json({ horarios });
+        return res.status(200).json({ horarios: asignaciones.map(a => ({ ...a.horario, activo: a.activo, asignacion_id: a.id })) });
     } catch (error) {
         return res.status(500).json({ message: "Error al obtener los horarios", error: error.message });
     }
@@ -53,29 +81,53 @@ const updateHorario = async (req, res) => {
         const { id } = req.params;
         const { dia_semana, hora_inicio, hora_fin, activo } = req.body;
 
-        const existing = await prisma.horarioEmpleado.findUnique({
+        const asignacion = await prisma.empleadoHorarioAsignacion.findUnique({
             where: { id: parseInt(id) },
+            include: { horario: true }
         });
 
-        if (!existing) {
-            return res.status(404).json({ message: "Horario no encontrado" });
+        if (!asignacion) {
+            return res.status(404).json({ message: "Asignación de horario no encontrada" });
         }
 
-        const data = {};
-        if (dia_semana !== undefined) data.dia_semana = dia_semana;
-        if (hora_inicio !== undefined) data.hora_inicio = new Date(`1970-01-01T${hora_inicio}:00.000Z`);
-        if (hora_fin !== undefined) data.hora_fin = new Date(`1970-01-01T${hora_fin}:00.000Z`);
-        if (activo !== undefined) data.activo = activo;
+        if (dia_semana !== undefined || hora_inicio !== undefined || hora_fin !== undefined) {
+            const nuevoDia = dia_semana !== undefined ? dia_semana : asignacion.horario.dia_semana;
+            const nuevaHoraInicio = hora_inicio !== undefined ? new Date(`1970-01-01T${hora_inicio}:00.000Z`) : asignacion.horario.hora_inicio;
+            const nuevaHoraFin = hora_fin !== undefined ? new Date(`1970-01-01T${hora_fin}:00.000Z`) : asignacion.horario.hora_fin;
 
-        const horario = await prisma.horarioEmpleado.update({
-            where: { id: parseInt(id) },
-            data,
-            include: {
-                empleado: { include: { persona: true } },
-            },
-        });
+            let nuevoHorario = await prisma.horario.findFirst({
+                where: {
+                    dia_semana: nuevoDia,
+                    hora_inicio: nuevaHoraInicio,
+                    hora_fin: nuevaHoraFin,
+                }
+            });
 
-        return res.status(200).json({ message: "Horario actualizado exitosamente", horario });
+            if (!nuevoHorario) {
+                nuevoHorario = await prisma.horario.create({
+                    data: {
+                        dia_semana: nuevoDia,
+                        hora_inicio: nuevaHoraInicio,
+                        hora_fin: nuevaHoraFin,
+                    }
+                });
+            }
+
+            await prisma.empleadoHorarioAsignacion.update({
+                where: { id: parseInt(id) },
+                data: {
+                    horario_id: nuevoHorario.id,
+                    activo: activo !== undefined ? activo : asignacion.activo
+                }
+            });
+        } else if (activo !== undefined) {
+            await prisma.empleadoHorarioAsignacion.update({
+                where: { id: parseInt(id) },
+                data: { activo }
+            });
+        }
+
+        return res.status(200).json({ message: "Horario actualizado exitosamente" });
     } catch (error) {
         return res.status(500).json({ message: "Error al actualizar el horario", error: error.message });
     }
@@ -85,15 +137,15 @@ const deleteHorario = async (req, res) => {
     try {
         const { id } = req.params;
 
-        const existing = await prisma.horarioEmpleado.findUnique({
+        const asignacion = await prisma.empleadoHorarioAsignacion.findUnique({
             where: { id: parseInt(id) },
         });
 
-        if (!existing) {
-            return res.status(404).json({ message: "Horario no encontrado" });
+        if (!asignacion) {
+            return res.status(404).json({ message: "Asignación de horario no encontrada" });
         }
 
-        await prisma.horarioEmpleado.delete({
+        await prisma.empleadoHorarioAsignacion.delete({
             where: { id: parseInt(id) },
         });
 
@@ -105,14 +157,20 @@ const deleteHorario = async (req, res) => {
 
 const getAllHorarios = async (req, res) => {
     try {
-        const horarios = await prisma.horarioEmpleado.findMany({
-            include: {
-                empleado: { include: { persona: true } },
-            },
-            orderBy: [{ empleado_id: "asc" }, { dia_semana: "asc" }],
+        const asignaciones = await prisma.empleadoHorarioAsignacion.findMany({
+            orderBy: [{ empleado_id: "asc" }, { horario: { dia_semana: "asc" } }],
+            include: { horario: true }
         });
 
-        return res.status(200).json({ horarios });
+        const formattedHorarios = asignaciones.map(a => ({
+            id: a.id,
+            dia_semana: a.horario.dia_semana,
+            activo: a.activo,
+            hora_inicio: a.horario.hora_inicio.toISOString().split("T")[1].substring(0, 5),
+            hora_fin: a.horario.hora_fin.toISOString().split("T")[1].substring(0, 5)
+        }));
+
+        return res.status(200).json(formattedHorarios);
     } catch (error) {
         return res.status(500).json({ message: "Error al obtener los horarios", error: error.message });
     }

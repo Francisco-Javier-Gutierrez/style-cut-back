@@ -16,6 +16,10 @@ const register = async (req, res) => {
             password,
         } = req.body;
 
+        if (!username) {
+            return res.status(400).json({ message: "El nombre de usuario es obligatorio" });
+        }
+
         const existingUsername = await prisma.usuario.findUnique({
             where: { username },
         });
